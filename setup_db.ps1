@@ -8,9 +8,36 @@ $ErrorActionPreference = "Stop"
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptRoot
 
+function Get-MySqlExecutable {
+    $exe = Get-Command mysql.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue
+    if (-not $exe) {
+        $candidates = @(
+            'C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe',
+            'C:\Program Files\MySQL\MySQL Server 8.3\bin\mysql.exe',
+            'C:\Program Files\MySQL\MySQL Server 8.2\bin\mysql.exe',
+            'C:\Program Files\MySQL\MySQL Server 8.1\bin\mysql.exe',
+            'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe',
+            'C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe'
+        )
+        foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+                $exe = $candidate
+                break
+            }
+        }
+    }
+    if (-not $exe) {
+        Write-Host "❌ mysql.exe not found on PATH or common MySQL install locations." -ForegroundColor Red
+        exit 1
+    }
+    return $exe
+}
+
+$mysqlExe = Get-MySqlExecutable
+
 $user = "root"
 $pass = "Lopa02468"
-$db   = "onereserve"
+$db = "onereserve"
 
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 Write-Host "  OneReserve Database Auto-Setup" -ForegroundColor Cyan
@@ -31,14 +58,16 @@ function Run-SqlFile {
     
     Write-Host "► Step $step : $name..." -ForegroundColor Yellow
     try {
-        cmd.exe /c "mysql -u $user -p$pass < $file"
-        if ($LASTEXITCODE -eq 0) {
+        $proc = Start-Process -FilePath $mysqlExe -ArgumentList "-u", $user, "-p$pass" -RedirectStandardInput $file -NoNewWindow -Wait -PassThru
+        if ($proc.ExitCode -eq 0) {
             Write-Host "  ✅ Success" -ForegroundColor Green
-        } else {
-            Write-Host "  ❌ Failed (exit code $LASTEXITCODE)" -ForegroundColor Red
-            exit $LASTEXITCODE
         }
-    } catch {
+        else {
+            Write-Host "  ❌ Failed (exit code $($proc.ExitCode))" -ForegroundColor Red
+            exit $proc.ExitCode
+        }
+    }
+    catch {
         Write-Host "  ❌ Error: $_" -ForegroundColor Red
         exit 1
     }
@@ -48,14 +77,16 @@ function Run-SqlFile {
 # Verify MySQL is accessible
 Write-Host "► Checking MySQL connection..." -ForegroundColor Yellow
 try {
-    cmd.exe /c "mysql -u $user -p$pass -e \"SELECT 1;\" > nul 2>&1"
-    if ($LASTEXITCODE -eq 0) {
+    $proc = Start-Process -FilePath $mysqlExe -ArgumentList "-u", $user, "-p$pass", "-e", "SELECT 1;" -RedirectStandardOutput "NUL" -RedirectStandardError "NUL" -NoNewWindow -Wait -PassThru
+    if ($proc.ExitCode -eq 0) {
         Write-Host "  ✅ MySQL is accessible" -ForegroundColor Green
-    } else {
-        Write-Host "  ❌ Cannot connect to MySQL" -ForegroundColor Red
-        exit 1
     }
-} catch {
+    else {
+        Write-Host "  ❌ Cannot connect to MySQL" -ForegroundColor Red
+        exit $proc.ExitCode
+    }
+}
+catch {
     Write-Host "  ❌ Error: $_" -ForegroundColor Red
     exit 1
 }
@@ -88,7 +119,8 @@ $output = cmd.exe /c $checkCmd 2>$null
 if ($output) {
     Write-Host "  ✅ Data verification:" -ForegroundColor Green
     $output | ForEach-Object { Write-Host "     $_" -ForegroundColor Green }
-} else {
+}
+else {
     Write-Host "  ⚠️  Could not verify counts" -ForegroundColor Yellow
 }
 

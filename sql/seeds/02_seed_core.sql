@@ -92,7 +92,7 @@ VALUES
 
 -- ── Hill Tracts ────────────────────────────────────────────
 (8,  'Bandarban',
-     'Bangladesh's most dramatic hill district — home to Boga Lake, Saka Haphong (highest peak), Nilgiri, and rich indigenous culture.',
+     'Bangladesh''s most dramatic hill district — home to Boga Lake, Saka Haphong (highest peak), Nilgiri, and rich indigenous culture.',
      'assets/places/bandarban.jpg',     22.19530,  92.21840,
      'https://goo.gl/maps/bandarban',  'Hills',   1),
 

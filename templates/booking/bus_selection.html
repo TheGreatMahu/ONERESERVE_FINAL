@@ -149,8 +149,11 @@
       </div>
       <div id="mcost" class="p-3 bg-green-50 rounded-xl text-sm text-green-700 font-medium hidden"></div>
     </div>
-    <div class="flex gap-3 mt-5">
+    <div class="flex flex-col sm:flex-row gap-3 mt-5">
       <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">Cancel</button>
+      <button onclick="bookBusOnly()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-white font-black text-sm shadow hover:bg-slate-900 transition">
+        Book Bus Only
+      </button>
       <button onclick="proceed()" class="flex-1 btn-primary text-white font-black py-2.5 rounded-xl text-sm shadow">
         Next: Hotel <i data-lucide="arrow-right" class="w-4 h-4 inline ml-1 -mt-0.5"></i>
       </button>
@@ -179,7 +182,12 @@ function updateCost(){
   const co=document.getElementById('mcheckout').value;
   const bcost=(selFare*seats).toFixed(0);
   const el=document.getElementById('mcost');
-  if(ci&&co&&co>ci){el.classList.remove('hidden');el.textContent='Bus cost: ৳'+bcost+' for '+seats+' seat(s)';}
+  el.classList.remove('hidden');
+  if(ci&&co&&co>ci){
+    el.textContent='Bus cost: ৳'+bcost+' for '+seats+' seat(s)';
+  } else {
+    el.textContent='Bus cost: ৳'+bcost+' for '+seats+' seat(s). Hotel selection is optional.';
+  }
 }
 document.getElementById('mseats').addEventListener('input',updateCost);
 document.getElementById('mcheckin').addEventListener('change',function(){
@@ -197,6 +205,10 @@ function proceed(){
   if(!ci||!co){showToast('Please select check-in and check-out dates.','warning');return;}
   if(co<=ci){showToast('Check-out must be after check-in.','warning');return;}
   window.location.href=`/book/hotel/${selSched}?checkin=${ci}&checkout=${co}&seats=${seats}`;
+}
+function bookBusOnly(){
+  const seats=document.getElementById('mseats').value;
+  window.location.href=`/book/summary?schedule_id=${selSched}&seats=${seats}`;
 }
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 </script>

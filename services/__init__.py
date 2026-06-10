@@ -118,7 +118,7 @@ def get_hotels(place_id=None, min_rating=None, max_price=None, page=1, per_page=
         cheap = RoomType.query.with_entities(RoomType.hotel_id).filter(RoomType.room_price <= max_price).subquery()
         q = q.filter(Hotel.hotel_id.in_(cheap))
     pag = q.order_by(Hotel.rating.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    return {"hotels":[h.to_dict() for h in pag.items],"total":pag.total,"pages":pag.pages,"current_page":pag.page}
+    return {"hotels":[h.to_dict(include_rooms=True) for h in pag.items],"total":pag.total,"pages":pag.pages,"current_page":pag.page}
 
 def get_hotel_detail(hotel_id):
     from models import Hotel
@@ -135,23 +135,30 @@ def get_room_types(hotel_id):
     return [rt.to_dict() for rt in hotel.room_types.filter(RoomType.available_rooms > 0)]
 
 # ── Booking ───────────────────────────────────────────────────
-def calculate_trip_cost(schedule_id, seat_qty, room_type_id, checkin_str, checkout_str):
+def calculate_trip_cost(schedule_id, seat_qty, room_type_id=None, checkin_str="", checkout_str=""):
     from models import Schedule, RoomType
+    if seat_qty < 1: return None, "Seat quantity must be at least 1."
+    schedule = Schedule.query.get(schedule_id)
+    if not schedule: return None, "Schedule not found."
+    if schedule.bus.available_seats < seat_qty:
+        return None, f"Only {schedule.bus.available_seats} seat(s) available."
+    bus_cost = float(schedule.fare) * seat_qty
+    if not room_type_id:
+        return {"schedule_id":schedule_id,"seat_quantity":seat_qty,"bus_fare_each":float(schedule.fare),
+                "bus_cost":bus_cost,"room_type_id":None,"room_name":None,
+                "room_price_night":0.0,"nights":0,
+                "checkin":None,"checkout":None,"hotel_cost":0.0,
+                "total_amount":bus_cost}, None
     try:
         checkin = datetime.strptime(checkin_str, "%Y-%m-%d").date()
         checkout = datetime.strptime(checkout_str, "%Y-%m-%d").date()
     except ValueError:
         return None, "Invalid date format. Use YYYY-MM-DD."
     if checkout <= checkin: return None, "Checkout must be after checkin."
-    if seat_qty < 1: return None, "Seat quantity must be at least 1."
-    nights = (checkout - checkin).days
-    schedule = Schedule.query.get(schedule_id)
     room_type = RoomType.query.get(room_type_id)
-    if not schedule: return None, "Schedule not found."
     if not room_type: return None, "Room type not found."
-    if schedule.bus.available_seats < seat_qty: return None, f"Only {schedule.bus.available_seats} seat(s) available."
     if room_type.available_rooms < 1: return None, "No rooms available."
-    bus_cost = float(schedule.fare) * seat_qty
+    nights = (checkout - checkin).days
     room_cost = float(room_type.room_price) * nights
     return {"schedule_id":schedule_id,"seat_quantity":seat_qty,"bus_fare_each":float(schedule.fare),
             "bus_cost":bus_cost,"room_type_id":room_type_id,"room_name":room_type.room_name,
@@ -159,13 +166,16 @@ def calculate_trip_cost(schedule_id, seat_qty, room_type_id, checkin_str, checko
             "checkin":checkin_str,"checkout":checkout_str,"hotel_cost":room_cost,
             "total_amount":bus_cost+room_cost}, None
 
-def create_booking(user_id, schedule_id, seat_qty, room_type_id, checkin_str, checkout_str, notes=""):
+def create_booking(user_id, schedule_id, seat_qty, room_type_id=None, checkin_str="", checkout_str="", notes=""):
     try:
-        checkin = datetime.strptime(checkin_str, "%Y-%m-%d").date()
-        checkout = datetime.strptime(checkout_str, "%Y-%m-%d").date()
+        checkin = datetime.strptime(checkin_str, "%Y-%m-%d").date() if checkin_str else None
+        checkout = datetime.strptime(checkout_str, "%Y-%m-%d").date() if checkout_str else None
     except ValueError:
         return None, "Invalid date format."
-    if checkout <= checkin: return None, "Checkout must be after checkin."
+    if room_type_id and (not checkin or not checkout):
+        return None, "Hotel check-in and check-out dates are required when selecting a room."
+    if room_type_id and checkout <= checkin:
+        return None, "Checkout must be after checkin."
     return call_create_booking(user_id, schedule_id, seat_qty, room_type_id, checkin, checkout, notes)
 
 def process_payment(booking_id, method, amount, txn_ref=None, user_email="system"):

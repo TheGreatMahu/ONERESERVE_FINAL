@@ -1,0 +1,27 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environment
+.env
+.venv/
+venv/
+ENV/
+
+# MySQL and user-specific data
+mysql_data/
+flask_session/
+
+# Backup and temp files
+*.bak
+*.swp
+*.tmp
+*.log
+
+# Local test artifacts
+test_mysql*.sql
+snippet.sql
+sql_quote_fixer.py
+fix_sql_quotes.py
+fix_sql_single_quotes.py

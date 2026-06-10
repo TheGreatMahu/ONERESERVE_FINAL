@@ -47,6 +47,13 @@
     </div>
   </div>
 
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <p class="text-sm text-slate-500">You can skip hotel selection and continue with bus-only booking.</p>
+    <a href="/book/summary?schedule_id={{ schedule.schedule_id }}&seats={{ seats }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900 transition">
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>Skip Hotel Selection
+    </a>
+  </div>
+
   {% if hotels %}
   <div class="space-y-6">
     {% set grads=['from-blue-500 to-cyan-400','from-teal-500 to-emerald-400','from-violet-500 to-purple-400','from-amber-500 to-orange-400','from-rose-500 to-pink-400','from-indigo-500 to-blue-400'] %}
@@ -76,41 +83,49 @@
 
       <!-- Room types -->
       <div class="divide-y divide-slate-100">
-        {% for rt in hotel.room_types %}
-        {% if rt.available_rooms > 0 %}
-        <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition">
-          <div class="flex-1">
-            <div class="font-bold text-slate-800 flex items-center gap-2">
-              {{ rt.room_name }}
-              {% if rt.available_rooms <= 3 %}<span class="badge bg-orange-100 text-orange-700 text-xs">Only {{ rt.available_rooms }} left!</span>{% endif %}
-            </div>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-              <span class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i>Up to {{ rt.room_capacity }} guests</span>
-              <span class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="door-open" class="w-3.5 h-3.5"></i>{{ rt.available_rooms }} rooms available</span>
-            </div>
-            {% if rt.amenities %}
-            <div class="flex flex-wrap gap-1 mt-2">
-              {% for am in rt.amenities.split(',')[:5] %}
-              <span class="badge bg-teal-50 text-teal-700 text-xs">{{ am.strip() }}</span>
-              {% endfor %}
+        {% set room_types = hotel.room_types or [] %}
+        {% if room_types %}
+          {% for rt in room_types %}
+            {% if rt.available_rooms > 0 %}
+            <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition">
+              <div class="flex-1">
+                <div class="font-bold text-slate-800 flex items-center gap-2">
+                  {{ rt.room_name }}
+                  {% if rt.available_rooms <= 3 %}<span class="badge bg-orange-100 text-orange-700 text-xs">Only {{ rt.available_rooms }} left!</span>{% endif %}
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                  <span class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i>Up to {{ rt.room_capacity }} guests</span>
+                  <span class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="door-open" class="w-3.5 h-3.5"></i>{{ rt.available_rooms }} rooms available</span>
+                </div>
+                {% if rt.amenities %}
+                <div class="flex flex-wrap gap-1 mt-2">
+                  {% for am in rt.amenities.split(',')[:5] %}
+                  <span class="badge bg-teal-50 text-teal-700 text-xs">{{ am.strip() }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              <div class="flex items-center gap-4 flex-shrink-0">
+                <div class="text-right">
+                  <div class="font-black text-blue-700 text-xl">৳{{ "%.0f"|format(rt.room_price) }}</div>
+                  <div class="text-xs text-slate-400">/night</div>
+                  <div class="text-xs text-slate-500" id="ncost-{{ rt.room_type_id }}"></div>
+                </div>
+                <a href="/book/summary?schedule_id={{ schedule.schedule_id }}&room_type_id={{ rt.room_type_id }}&checkin={{ checkin }}&checkout={{ checkout }}&seats={{ seats }}"
+                  class="btn-primary text-white font-black px-5 py-2.5 rounded-xl text-sm shadow whitespace-nowrap">
+                  Select <i data-lucide="arrow-right" class="w-4 h-4 inline ml-1 -mt-0.5"></i>
+                </a>
+              </div>
             </div>
             {% endif %}
-          </div>
-          <div class="flex items-center gap-4 flex-shrink-0">
-            <div class="text-right">
-              <div class="font-black text-blue-700 text-xl">৳{{ "%.0f"|format(rt.room_price) }}</div>
-              <div class="text-xs text-slate-400">/night</div>
-              {% set nights=(checkout|string and checkin|string) %}
-              <div class="text-xs text-slate-500" id="ncost-{{ rt.room_type_id }}"></div>
-            </div>
-            <a href="/book/summary?schedule_id={{ schedule.schedule_id }}&room_type_id={{ rt.room_type_id }}&checkin={{ checkin }}&checkout={{ checkout }}&seats={{ seats }}"
-              class="btn-primary text-white font-black px-5 py-2.5 rounded-xl text-sm shadow whitespace-nowrap">
-              Select <i data-lucide="arrow-right" class="w-4 h-4 inline ml-1 -mt-0.5"></i>
-            </a>
-          </div>
-        </div>
+          {% endfor %}
+          {% set available_rooms = room_types|selectattr('available_rooms','gt',0)|list %}
+          {% if available_rooms|length == 0 %}
+          <div class="p-5 text-slate-500 text-sm">No available rooms found for this hotel.</div>
+          {% endif %}
+        {% else %}
+          <div class="p-5 text-slate-500 text-sm">No room information available for this hotel.</div>
         {% endif %}
-        {% endfor %}
       </div>
     </div>
     {% endfor %}

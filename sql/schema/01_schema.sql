@@ -441,7 +441,7 @@ VALUES
 
 -- ── Hill Tracts ────────────────────────────────────────────
 (8,  'Bandarban',
-     'Bangladesh's most dramatic hill district — home to Boga Lake, Saka Haphong (highest peak), Nilgiri, and rich indigenous culture.',
+     'Bangladesh''s most dramatic hill district — home to Boga Lake, Saka Haphong (highest peak), Nilgiri, and rich indigenous culture.',
      'assets/places/bandarban.jpg',     22.19530,  92.21840,
      'https://goo.gl/maps/bandarban',  'Hills',   1),
 
@@ -1055,11 +1055,11 @@ INSERT INTO reviews (user_id, place_id, rating, review_text, review_date) VALUES
 (8,  9,  4, "Ratargul swamp forest is mysteriously beautiful. The flooded trees create an ethereal atmosphere. Hire a local boatman — they know every channel. Best in monsoon season.", '2026-06-06 14:20:00'),
 (9,  1,  5, "Stayed at Sayeman Beach Resort and it was world-class. The private beach access, the infinity pool, and watching the longest beach in the world at sunrise from our balcony — 10/10.", '2026-06-07 09:00:00'),
 (10, 3,  4, 'Kuakata delivered on its promise — we watched sunrise on the beach and turned around for sunset. The seafood market in the evening is vibrant and delicious.', '2026-06-07 17:00:00'),
-(11,18,  4, 'Mahasthangarh is a history lover's dream. Walking through 2,300 years of Bangladesh history in a single site is humbling. The museum next door is small but excellent.', '2026-06-07 21:00:00'),
+(11,18,  4, 'Mahasthangarh is a history lover''s dream. Walking through 2,300 years of Bangladesh history in a single site is humbling. The museum next door is small but excellent.', '2026-06-07 21:00:00'),
 (12,10,  5, 'Tanguar Haor during peak winter is one of the most spectacular sights in Bangladesh. The houseboat stay was rustic but magical — birds calling before dawn, fog on the water.', '2026-06-08 08:30:00'),
 (14,16,  4, 'Bagerhat is criminally undervisited. The Sixty Dome Mosque is awe-inspiring and the town is peaceful. Highly recommend an early morning walk around the complex.', '2026-06-08 19:00:00'),
 (15, 8,  4, 'Jaflong is where water meets mountain in the most dramatic way. The boulders rolling in the crystal river from Meghalaya are a geological wonder.', '2026-06-09 08:00:00'),
-(1,  4,  3, 'Patenga is a nice quick getaway from Dhaka if you're transiting through Chattogram. The street food especially the mezbani beef is excellent. Beach itself is small.', '2026-06-09 14:00:00'),
+(1,  4,  3, 'Patenga is a nice quick getaway from Dhaka if you''re transiting through Chattogram. The street food especially the mezbani beef is excellent. Beach itself is small.', '2026-06-09 14:00:00'),
 (3, 11,  4, 'Madhabkunda Waterfall was powerful during this season. The trek through rubber plantations to reach it adds to the adventure. Very refreshing after a hot journey.', '2026-06-08 15:00:00'),
 (4, 14,  3, 'Khagrachari is beautiful but Alutila cave requires a strong stomach for darkness. The Risang Khong waterfall is worth the extra hike.', '2026-06-09 11:00:00'),
 (5, 17,  4, 'Paharpur Mahavihara is a UNESCO gem that deserves more attention. The archaeological scale is staggering — as large as the greatest monasteries of the ancient world.', '2026-06-09 16:00:00'),
@@ -1655,7 +1655,7 @@ CREATE PROCEDURE sp_create_booking(
     OUT p_total_amount  DECIMAL(12,2),
     OUT p_message       VARCHAR(255)
 )
-BEGIN
+sp_create_booking: BEGIN
     DECLARE v_fare         DECIMAL(10,2);
     DECLARE v_avail_seats  INT;
     DECLARE v_room_price   DECIMAL(10,2);
@@ -1735,7 +1735,7 @@ CREATE PROCEDURE sp_cancel_booking(
     IN  p_reason      VARCHAR(255),
     OUT p_message     VARCHAR(255)
 )
-BEGIN
+sp_cancel_booking: BEGIN
     DECLARE v_status VARCHAR(30);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1790,7 +1790,7 @@ CREATE PROCEDURE sp_process_payment(
     OUT p_payment_id   INT,
     OUT p_message      VARCHAR(255)
 )
-BEGIN
+sp_process_payment: BEGIN
     DECLARE v_total    DECIMAL(12,2);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1828,7 +1828,7 @@ CREATE PROCEDURE sp_search_schedules(
     IN p_travel_date  DATE,
     IN p_bus_type     VARCHAR(50)   -- NULL = any type
 )
-BEGIN
+sp_search_schedules: BEGIN
     SELECT
         s.schedule_id,
         p.place_name    AS destination,
@@ -1866,7 +1866,7 @@ CREATE PROCEDURE sp_get_booking_history(
     IN p_limit     INT,
     IN p_offset    INT
 )
-BEGIN
+sp_get_booking_history: BEGIN
     SELECT
         bk.booking_id,
         bk.booking_date,
@@ -1906,7 +1906,7 @@ DROP PROCEDURE IF EXISTS sp_monthly_revenue_report$$
 CREATE PROCEDURE sp_monthly_revenue_report(
     IN p_year  INT
 )
-BEGIN
+sp_monthly_revenue_report: BEGIN
     SELECT
         MONTH(py.payment_date)                  AS month_num,
         MONTHNAME(py.payment_date)              AS month_name,

@@ -26,7 +26,7 @@ CREATE PROCEDURE sp_create_booking(
     OUT p_total_amount  DECIMAL(12,2),
     OUT p_message       VARCHAR(255)
 )
-BEGIN
+sp_create_booking: BEGIN
     DECLARE v_fare         DECIMAL(10,2);
     DECLARE v_avail_seats  INT;
     DECLARE v_room_price   DECIMAL(10,2);
@@ -106,7 +106,7 @@ CREATE PROCEDURE sp_cancel_booking(
     IN  p_reason      VARCHAR(255),
     OUT p_message     VARCHAR(255)
 )
-BEGIN
+sp_cancel_booking: BEGIN
     DECLARE v_status VARCHAR(30);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -161,7 +161,7 @@ CREATE PROCEDURE sp_process_payment(
     OUT p_payment_id   INT,
     OUT p_message      VARCHAR(255)
 )
-BEGIN
+sp_process_payment: BEGIN
     DECLARE v_total    DECIMAL(12,2);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -199,7 +199,7 @@ CREATE PROCEDURE sp_search_schedules(
     IN p_travel_date  DATE,
     IN p_bus_type     VARCHAR(50)   -- NULL = any type
 )
-BEGIN
+sp_search_schedules: BEGIN
     SELECT
         s.schedule_id,
         p.place_name    AS destination,
@@ -237,7 +237,7 @@ CREATE PROCEDURE sp_get_booking_history(
     IN p_limit     INT,
     IN p_offset    INT
 )
-BEGIN
+sp_get_booking_history: BEGIN
     SELECT
         bk.booking_id,
         bk.booking_date,
@@ -277,7 +277,7 @@ DROP PROCEDURE IF EXISTS sp_monthly_revenue_report$$
 CREATE PROCEDURE sp_monthly_revenue_report(
     IN p_year  INT
 )
-BEGIN
+sp_monthly_revenue_report: BEGIN
     SELECT
         MONTH(py.payment_date)                  AS month_num,
         MONTHNAME(py.payment_date)              AS month_name,

@@ -12,33 +12,42 @@ def execute_write(sql, params=None):
         conn.execute(text(sql), params or {})
 
 def call_create_booking(user_id, schedule_id, seat_qty, room_type_id, checkin, checkout, notes):
-    from models.booking import Booking, BookingBus, BookingHotel, BookingLog
-    from models.schedule import Schedule
-    from models.bus import Bus
-    from models.hotel import RoomType
+    from models import Schedule, Bus, RoomType
+    from models import Booking, BookingBus, BookingHotel, BookingLog
     schedule = Schedule.query.get(schedule_id)
     bus = Bus.query.get(schedule.bus_id) if schedule else None
-    room_type = RoomType.query.get(room_type_id)
-    if not schedule or not bus or not room_type:
-        return None, "Invalid schedule or room type."
+    if not schedule or not bus:
+        return None, "Invalid schedule."
     if bus.available_seats < seat_qty:
         return None, f"Only {bus.available_seats} seat(s) available."
-    if room_type.available_rooms < 1:
-        return None, "Room not available."
-    nights = (checkout - checkin).days
     bus_total = float(schedule.fare) * seat_qty
-    room_total = float(room_type.room_price) * nights
+    room_total = 0.0
+    nights = 0
+    room_type = None
+    if room_type_id:
+        room_type = RoomType.query.get(room_type_id)
+        if not room_type:
+            return None, "Invalid room type."
+        if room_type.available_rooms < 1:
+            return None, "Room not available."
+        if not checkin or not checkout:
+            return None, "Hotel check-in and check-out dates are required when selecting a room."
+        nights = (checkout - checkin).days
+        if nights <= 0:
+            return None, "Checkout must be after checkin."
+        room_total = float(room_type.room_price) * nights
     total = bus_total + room_total
     try:
         booking = Booking(user_id=user_id, total_amount=total, booking_status="pending", notes=notes)
         db.session.add(booking)
         db.session.flush()
         bb = BookingBus(booking_id=booking.booking_id, schedule_id=schedule_id, seat_quantity=seat_qty, fare=bus_total)
-        bh = BookingHotel(booking_id=booking.booking_id, room_type_id=room_type_id, checkin_date=checkin, checkout_date=checkout, nights=nights, room_cost=room_total)
         db.session.add(bb)
-        db.session.add(bh)
+        if room_type:
+            bh = BookingHotel(booking_id=booking.booking_id, room_type_id=room_type_id, checkin_date=checkin, checkout_date=checkout, nights=nights, room_cost=room_total)
+            db.session.add(bh)
+            room_type.available_rooms -= 1
         bus.available_seats -= seat_qty
-        room_type.available_rooms -= 1
         log = BookingLog(booking_id=booking.booking_id, action_type="BOOKING_CREATED", new_status="pending", remarks="Created via Flask")
         db.session.add(log)
         db.session.commit()
@@ -48,10 +57,7 @@ def call_create_booking(user_id, schedule_id, seat_qty, room_type_id, checkin, c
         return None, str(e)
 
 def call_cancel_booking(booking_id, reason="User requested"):
-    from models.booking import Booking, BookingBus, BookingHotel, BookingLog, Payment
-    from models.bus import Bus
-    from models.schedule import Schedule
-    from models.hotel import RoomType
+    from models import Booking, BookingBus, BookingHotel, BookingLog, Payment, Schedule, Bus, RoomType
     booking = Booking.query.get(booking_id)
     if not booking:
         return False, "Booking not found."

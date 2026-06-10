@@ -87,7 +87,7 @@ def select_hotel(schedule_id):
     checkin  = request.args.get("checkin","")
     checkout = request.args.get("checkout","")
     seats    = request.args.get("seats", 1, type=int)
-    hotels   = Hotel.query.filter_by(place_id=place.place_id, is_active=True).all()
+    hotels   = [h.to_dict(include_rooms=True) for h in Hotel.query.filter_by(place_id=place.place_id, is_active=True).all()]
     return render_template("booking/hotel_selection.html", schedule=schedule, place=place, hotels=hotels, checkin=checkin, checkout=checkout, seats=seats)
 
 @web_bp.route("/book/summary")
@@ -98,12 +98,15 @@ def booking_summary():
     checkin      = request.args.get("checkin","")
     checkout     = request.args.get("checkout","")
     seats        = request.args.get("seats", 1, type=int)
-    if not all([schedule_id, room_type_id, checkin, checkout]):
-        flash("Incomplete booking details.", "error"); return redirect(url_for("web.destinations"))
+    if not schedule_id or seats < 1:
+        flash("Incomplete booking details.", "error")
+        return redirect(url_for("web.destinations"))
     cost, err = svc.calculate_trip_cost(schedule_id, seats, room_type_id, checkin, checkout)
-    if err: flash(err, "error"); return redirect(url_for("web.destinations"))
-    schedule  = Schedule.query.get(schedule_id)
-    room_type = RoomType.query.get(room_type_id)
+    if err:
+        flash(err, "error")
+        return redirect(url_for("web.destinations"))
+    schedule = Schedule.query.get(schedule_id)
+    room_type = RoomType.query.get(room_type_id) if room_type_id else None
     return render_template("booking/summary.html", schedule=schedule, room_type=room_type, cost=cost, checkin=checkin, checkout=checkout, seats=seats)
 
 @web_bp.route("/book/confirm", methods=["POST"])
@@ -116,10 +119,18 @@ def confirm_booking():
     seats        = request.form.get("seats", 1, type=int)
     pay_method   = request.form.get("payment_method","bkash")
     notes        = request.form.get("notes","")
-    booking, msg = svc.create_booking(current_user.user_id, schedule_id, seats, room_type_id, checkin, checkout, notes)
-    if not booking: flash(msg, "error"); return redirect(url_for("web.booking_summary", schedule_id=schedule_id, room_type_id=room_type_id, checkin=checkin, checkout=checkout, seats=seats))
+    booking, msg = svc.create_booking(current_user.user_id, schedule_id, seats, room_type_id or None, checkin, checkout, notes)
+    if not booking:
+        flash(msg, "error")
+        args = {"schedule_id": schedule_id, "seats": seats}
+        if room_type_id:
+            args.update({"room_type_id": room_type_id, "checkin": checkin, "checkout": checkout})
+        return redirect(url_for("web.booking_summary", **args))
     payment, pmsg = svc.process_payment(booking.booking_id, pay_method, float(booking.total_amount), user_email=current_user.email)
-    flash("Booking confirmed! Have a great trip! 🎉", "success") if payment else flash(f"Booking created but payment pending: {pmsg}", "warning")
+    if payment:
+        flash("Booking confirmed! Have a great trip! 🎉", "success")
+    else:
+        flash(f"Booking created but payment pending: {pmsg}", "warning")
     return redirect(url_for("web.booking_confirmed", booking_id=booking.booking_id))
 
 @web_bp.route("/book/confirmed/<int:booking_id>")

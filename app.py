@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, jsonify, render_template, send_from_directory
 from flask_login import LoginManager
 from flask_cors import CORS
@@ -43,35 +44,49 @@ def create_app(config_name=None):
     @app.route("/assets/<path:filename>")
     def serve_assets(filename):
         assets_dir = os.path.join(app.root_path, "assets")
-        # Try direct path first
         requested = os.path.join(assets_dir, filename)
         if os.path.exists(requested):
             return send_from_directory(assets_dir, filename)
 
-        # Fallbacks: attempt to locate a matching file in the assets root by
-        # basename ignoring case, spaces and underscores, or when files live
-        # in the root instead of subfolders (e.g., seeds point to assets/places/..)
         base = os.path.basename(filename)
         name, ext = os.path.splitext(base)
         norm = ''.join(ch for ch in name.lower() if ch.isalnum())
+
+        best_match = None
+        best_score = 0
         for root, _, files in os.walk(assets_dir):
             for f in files:
                 fname, fext = os.path.splitext(f)
-                if fext.lower() != ext.lower():
-                    continue
                 fnorm = ''.join(ch for ch in fname.lower() if ch.isalnum())
-                # Match exact normalized name or substring heuristics
-                if fnorm == norm or norm in fnorm or fnorm in norm:
+                score = 0
+                if fnorm == norm:
+                    score = 100
+                elif norm in fnorm or fnorm in norm:
+                    score = 80
+                elif any(token in fnorm for token in re.split(r"[^a-z0-9]", norm) if token):
+                    score = 50
+                if score > 0:
+                    if fext.lower() == ext.lower():
+                        score += 10
+                    if score > best_score:
+                        best_score = score
+                        best_match = os.path.relpath(os.path.join(root, f), assets_dir)
+                        if score >= 110:
+                            break
+            if best_score >= 110:
+                break
+
+        if best_match:
+            return send_from_directory(assets_dir, best_match)
+
+        # Fallback to any same basename ignoring extension
+        for root, _, files in os.walk(assets_dir):
+            for f in files:
+                fname, _ = os.path.splitext(f)
+                if fname.lower() == name.lower():
                     rel = os.path.relpath(os.path.join(root, f), assets_dir)
                     return send_from_directory(assets_dir, rel)
 
-        # As a last resort, try serving from assets root ignoring subfolders
-        for f in os.listdir(assets_dir):
-            fname, fext = os.path.splitext(f)
-            if fext.lower() == ext.lower() and fname.lower() == name.lower():
-                return send_from_directory(assets_dir, f)
-
-        # Let Flask return 404 if nothing matches
         return send_from_directory(assets_dir, filename)
 
     @app.errorhandler(404)
